@@ -42,7 +42,11 @@ export default function ClientDetailPage() {
           <InfoRow label="Contact" value={client.contactNo} />
           <InfoRow label="Email" value={client.email || "-"} />
           <InfoRow label="Type" value={client.type} />
+          <InfoRow label="Property Type" value={client.propertyType || "-"} />
           <InfoRow label="Address" value={client.address || "-"} />
+          <InfoRow label="Province" value={client.locationType?.province || "-"} />
+          <InfoRow label="District" value={client.locationType?.district || "-"} />
+          <InfoRow label="Local Level" value={client.locationType?.municipality || client.locationType?.vdc || "-"} />
           <InfoRow label="Source" value={client.source || "-"} />
           <InfoRow label="Budget NPR" value={client.budget_npr ? Number(client.budget_npr).toLocaleString() : "-"} />
           <InfoRow label="Location Preference" value={client.location_preference || "-"} />
