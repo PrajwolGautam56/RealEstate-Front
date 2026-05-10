@@ -125,14 +125,24 @@ export default function PropertiesPage() {
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700"
+          className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800"
           onClick={clearParams}
         >
-          Clear filters
+          Reset all
         </button>
       </div>
 
       <div className={`space-y-3 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg backdrop-blur ${showFilters ? "block" : "hidden md:block"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <span className="text-sm font-semibold text-slate-900">Filters</span>
+          <button
+            type="button"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={clearParams}
+          >
+            Reset all filters
+          </button>
+        </div>
         <div className="grid gap-2 md:grid-cols-6">
           <input
             className="md:col-span-2 rounded border border-slate-300 px-3 py-2 text-sm"
@@ -291,16 +301,6 @@ export default function PropertiesPage() {
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="hidden md:flex md:justify-end">
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700"
-          onClick={clearParams}
-        >
-          Clear filters
-        </button>
       </div>
 
       {loading ? <Spinner label="Loading properties..." /> : null}

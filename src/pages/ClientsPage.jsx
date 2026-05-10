@@ -128,16 +128,26 @@ export default function ClientsPage() {
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700"
+          className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800"
           onClick={clearParams}
         >
-          Clear filters
+          Reset all
         </button>
       </div>
 
       <div
         className={`space-y-3 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg backdrop-blur ${showFilters ? "block" : "hidden md:block"}`}
       >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <span className="text-sm font-semibold text-slate-900">Filters</span>
+          <button
+            type="button"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={clearParams}
+          >
+            Reset all filters
+          </button>
+        </div>
         <div className="grid gap-2 md:grid-cols-5">
           <input
             placeholder="Search name, phone, email, address, location…"
@@ -309,16 +319,6 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="hidden md:flex md:justify-end">
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700"
-          onClick={clearParams}
-        >
-          Clear filters
-        </button>
-      </div>
-
       {loading ? <Spinner label="Loading clients..." /> : null}
 
       {!loading ? (
@@ -330,6 +330,7 @@ export default function ClientsPage() {
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Contact</th>
                   <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Budget (NPR)</th>
                   <th className="px-4 py-3">Source</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Assigned Agent</th>
@@ -339,7 +340,7 @@ export default function ClientsPage() {
               <tbody>
                 {!clients.length ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                       No clients found
                     </td>
                   </tr>
@@ -363,6 +364,7 @@ export default function ClientsPage() {
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{client.type}</span>
                     </td>
+                    <td className="px-4 py-3 tabular-nums text-slate-800">{formatClientBudget(client)}</td>
                     <td className="px-4 py-3">{client.source || "-"}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2 py-1 text-xs ${statusColors[client.status] || "bg-slate-100 text-slate-700"}`}>
@@ -409,6 +411,9 @@ export default function ClientsPage() {
                 <p className="text-sm text-slate-600">
                   {client.contactNo} • {client.type}
                 </p>
+                <p className="text-sm tabular-nums text-slate-700">
+                  Budget: {formatClientBudget(client)}
+                </p>
                 <p className="text-sm text-slate-600">
                   {client.source || "-"} • Agent: {client.assignedAgent?.name || "-"}
                 </p>
@@ -441,4 +446,11 @@ export default function ClientsPage() {
       ) : null}
     </div>
   );
+}
+
+function formatClientBudget(client) {
+  if (client.type === "Seller") return "—";
+  const n = Number(client.budget_npr);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return `NPR ${n.toLocaleString()}`;
 }
