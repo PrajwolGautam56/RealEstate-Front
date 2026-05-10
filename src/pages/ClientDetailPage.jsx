@@ -76,11 +76,15 @@ export default function ClientDetailPage() {
         ) : (
           <div className="space-y-3">
             {client.linkedProperties.map((property) => (
-              <article key={property._id} className="rounded-xl border border-slate-200 p-3">
-                <h3 className="font-semibold text-slate-900">{property.name || property.title}</h3>
+              <Link
+                key={property._id}
+                to={`/properties/${property._id}`}
+                className="block rounded-xl border border-slate-200 p-3 transition hover:border-indigo-300 hover:bg-indigo-50/40"
+              >
+                <h3 className="font-semibold text-indigo-900">{property.name || property.title}</h3>
                 <p className="text-sm text-slate-600">{property.address}</p>
                 <p className="text-sm text-slate-700">NPR {Number(property.price_npr || property.price || 0).toLocaleString()}</p>
-              </article>
+              </Link>
             ))}
           </div>
         )}
@@ -94,20 +98,24 @@ export default function ClientDetailPage() {
           ) : (
             <div className="space-y-3">
               {client.interestedProperties.map((property) => (
-                <article key={property._id} className="rounded-xl border border-slate-200 p-3">
+                <Link
+                  key={property._id}
+                  to={`/properties/${property._id}`}
+                  className="block rounded-xl border border-slate-200 p-3 transition hover:border-indigo-300 hover:bg-indigo-50/40"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-semibold text-slate-900">{property.name}</h3>
+                      <h3 className="font-semibold text-indigo-900">{property.name}</h3>
                       <p className="text-sm text-slate-600">
-                        {property.locationType?.district || "-"}, {property.locationType?.municipality || "-"}
+                        {[property.locationType?.district, property.locationType?.municipality || property.locationType?.vdc].filter(Boolean).join(", ") || "-"}
                       </p>
                       <p className="text-sm text-slate-700">NPR {Number(property.price_npr || 0).toLocaleString()}</p>
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-xs ${statusColors[property.status] || "bg-slate-100 text-slate-700"}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${statusColors[property.status] || "bg-slate-100 text-slate-700"}`}>
                       {property.status}
                     </span>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           )}

@@ -60,16 +60,39 @@ export default function TopNavbar({ onMenuClick }) {
                 items={results.clients}
                 emptyText="No matching clients"
                 onClick={(item) => goTo(`/clients/${item._id}`)}
-                render={(item) => `${item.name} • ${item.type} • ${item.status}`}
+                render={(item) => (
+                  <>
+                    <span className="font-medium text-slate-900">{item.name}</span>
+                    <span className="block text-xs text-slate-500">
+                      {[item.contactNo, item.type, item.status].filter(Boolean).join(" • ")}
+                      {item.address ? ` • ${item.address}` : ""}
+                      {item.locationType?.district
+                        ? ` • ${[item.locationType?.province, item.locationType?.district, item.locationType?.municipality || item.locationType?.vdc].filter(Boolean).join(", ")}`
+                        : ""}
+                    </span>
+                  </>
+                )}
               />
               <ResultSection
                 title="Properties"
                 items={results.properties}
                 emptyText="No matching properties"
                 onClick={(item) => goTo(`/properties/${item._id}`)}
-                render={(item) =>
-                  `${item.propertyId || "-"} • ${item.name} • ${item.locationType?.district || "-"}, ${item.locationType?.municipality || "-"} • ${item.status}`
-                }
+                render={(item) => {
+                  const loc = item.locationType || {};
+                  const local = loc.municipality || loc.vdc || "";
+                  const locLine = [loc.province, loc.district, local].filter(Boolean).join(", ");
+                  return (
+                    <>
+                      <span className="font-medium text-slate-900">
+                        {item.propertyId ? `${item.propertyId} • ${item.name}` : item.name}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {[item.address, locLine, item.status].filter(Boolean).join(" • ")}
+                      </span>
+                    </>
+                  );
+                }}
               />
             </div>
           ) : null}
