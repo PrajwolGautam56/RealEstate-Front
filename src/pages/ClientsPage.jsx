@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { districtsByProvince, municipalitiesByDistrict, provinces } from "../data/nepalLocations";
 import { usePersistedSearchParams } from "../hooks/usePersistedSearchParams";
 import Spinner from "../components/Spinner";
 
@@ -36,9 +37,19 @@ export default function ClientsPage() {
       assignedAgent: searchParams.get("assignedAgent") || "",
       minBudget: searchParams.get("minBudget") || "",
       maxBudget: searchParams.get("maxBudget") || "",
+      province: searchParams.get("province") || "",
+      district: searchParams.get("district") || "",
+      municipality: searchParams.get("municipality") || "",
+      vdc: searchParams.get("vdc") || "",
+      ll: searchParams.get("ll") || "",
     }),
     [searchParams]
   );
+
+  const locationMode = filters.ll === "v" ? "vdc" : "municipality";
+
+  const districtOptions = useMemo(() => districtsByProvince[filters.province] || [], [filters.province]);
+  const municipalityOptions = useMemo(() => municipalitiesByDistrict[filters.district] || [], [filters.district]);
 
   const fetchAgents = useCallback(async () => {
     const { data } = await api.get("/users/agents");
@@ -47,6 +58,7 @@ export default function ClientsPage() {
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
+    const isVdcMode = searchParams.get("ll") === "v";
     const params = Object.fromEntries(
       Object.entries({
         search: searchParams.get("search"),
@@ -56,6 +68,10 @@ export default function ClientsPage() {
         assignedAgent: searchParams.get("assignedAgent"),
         minBudget: searchParams.get("minBudget"),
         maxBudget: searchParams.get("maxBudget"),
+        province: searchParams.get("province"),
+        district: searchParams.get("district"),
+        municipality: isVdcMode ? "" : searchParams.get("municipality"),
+        vdc: isVdcMode ? searchParams.get("vdc") : "",
       }).filter(([, value]) => value !== null && value !== undefined && value !== "")
     );
     const { data } = await api.get("/clients", { params });
@@ -75,6 +91,14 @@ export default function ClientsPage() {
     if (!window.confirm("Delete this client?")) return;
     await api.delete(`/clients/${id}`);
     fetchClients();
+  };
+
+  const setLocationMode = (mode) => {
+    if (mode === "vdc") {
+      patchParams({ ll: "v", municipality: "" });
+    } else {
+      patchParams({ ll: "", vdc: "" });
+    }
   };
 
   const totalText = useMemo(() => `${clients.length} client(s)`, [clients.length]);
@@ -167,6 +191,99 @@ export default function ClientsPage() {
             ))}
           </select>
         </div>
+
+        <div className="border-t border-slate-100 pt-3">
+          <p className="mb-2 text-xs font-medium text-slate-700">Location (matches client address hierarchy)</p>
+          <div className="grid gap-2 md:grid-cols-4">
+            <select
+              className="rounded border border-slate-300 px-3 py-2 text-sm"
+              value={filters.province}
+              onChange={(event) =>
+                patchParams({
+                  province: event.target.value,
+                  district: "",
+                  municipality: "",
+                  vdc: "",
+                })
+              }
+            >
+              <option value="">All Provinces</option>
+              {provinces.map((province) => (
+                <option key={province} value={province}>
+                  {province}
+                </option>
+              ))}
+            </select>
+            <select
+              className="rounded border border-slate-300 px-3 py-2 text-sm"
+              value={filters.district}
+              onChange={(event) =>
+                patchParams({
+                  district: event.target.value,
+                  municipality: "",
+                  vdc: "",
+                })
+              }
+            >
+              <option value="">{filters.province ? "All Districts" : "Select province first"}</option>
+              {districtOptions.map((district) => (
+                <option key={district} value={district}>
+                  {district}
+                </option>
+              ))}
+            </select>
+            <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+              <p className="mb-2 text-xs font-semibold text-slate-700">Local level (choose one)</p>
+              <div className="mb-3 flex flex-wrap gap-4">
+                <label className="text-sm">
+                  <input
+                    type="radio"
+                    name="ll-client-list"
+                    checked={locationMode === "municipality"}
+                    onChange={() => setLocationMode("municipality")}
+                  />
+                  <span className="ml-2">Municipality</span>
+                </label>
+                <label className="text-sm">
+                  <input type="radio" name="ll-client-list" checked={locationMode === "vdc"} onChange={() => setLocationMode("vdc")} />
+                  <span className="ml-2">VDC / Gaupalika</span>
+                </label>
+              </div>
+              {locationMode === "municipality" ? (
+                municipalityOptions.length ? (
+                  <select
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    value={filters.municipality}
+                    onChange={(event) => patchParams({ municipality: event.target.value })}
+                  >
+                    <option value="">{filters.district ? "All municipalities" : "Select district first"}</option>
+                    {municipalityOptions.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    placeholder={filters.district ? "Municipality (type if not in list)" : "Select district first"}
+                    value={filters.municipality}
+                    onChange={(event) => patchParams({ municipality: event.target.value })}
+                    disabled={!filters.district}
+                  />
+                )
+              ) : (
+                <input
+                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="VDC / Gaupalika"
+                  value={filters.vdc}
+                  onChange={(event) => patchParams({ vdc: event.target.value })}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="border-t border-slate-100 pt-3">
           <p className="mb-2 text-xs text-slate-500">Budget range (NPR) — applies to recorded buyer budget; sellers often have 0.</p>
           <div className="grid gap-2 md:grid-cols-2 md:max-w-xl">
