@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { districtsByProvince, municipalitiesByDistrict, provinces } from "../data/nepalLocations";
 import { usePersistedSearchParams } from "../hooks/usePersistedSearchParams";
+import { daysSinceUpdate, isHotClient } from "../utils/clientHelpers";
 import Spinner from "../components/Spinner";
 
 const statusColors = {
@@ -27,6 +28,9 @@ export default function ClientsPage() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchDraft, setSearchDraft] = useState(() => searchParams.get("search") || "");
+
+  const filterKey = searchParams.toString();
 
   const filters = useMemo(
     () => ({
@@ -42,9 +46,22 @@ export default function ClientsPage() {
       municipality: searchParams.get("municipality") || "",
       vdc: searchParams.get("vdc") || "",
       ll: searchParams.get("ll") || "",
+      hot: searchParams.get("hot") === "1",
     }),
     [searchParams]
   );
+
+  useEffect(() => {
+    setSearchDraft(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const current = searchParams.get("search") || "";
+      if (searchDraft !== current) patchParams({ search: searchDraft });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchDraft, searchParams, patchParams]);
 
   const locationMode = filters.ll === "v" ? "vdc" : "municipality";
 
@@ -72,12 +89,13 @@ export default function ClientsPage() {
         district: searchParams.get("district"),
         municipality: isVdcMode ? "" : searchParams.get("municipality"),
         vdc: isVdcMode ? searchParams.get("vdc") : "",
+        hot: searchParams.get("hot") === "1" ? "1" : "",
       }).filter(([, value]) => value !== null && value !== undefined && value !== "")
     );
     const { data } = await api.get("/clients", { params });
     setClients(data);
     setLoading(false);
-  }, [searchParams]);
+  }, [filterKey, searchParams]);
 
   useEffect(() => {
     fetchAgents();
@@ -102,6 +120,15 @@ export default function ClientsPage() {
   };
 
   const totalText = useMemo(() => `${clients.length} client(s)`, [clients.length]);
+
+  const toggleHot = () => {
+    patchParams({ hot: filters.hot ? "" : "1" });
+  };
+
+  const handleResetFilters = () => {
+    setSearchDraft("");
+    clearParams();
+  };
 
   return (
     <div className="space-y-4">
@@ -129,35 +156,65 @@ export default function ClientsPage() {
         <button
           type="button"
           className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800"
-          onClick={clearParams}
+          onClick={handleResetFilters}
         >
           Reset all
+        </button>
+        <button
+          type="button"
+          className={`inline-flex min-h-11 items-center rounded-md border px-4 py-2 text-sm font-semibold ${
+            filters.hot
+              ? "border-orange-400 bg-orange-100 text-orange-900"
+              : "border-orange-200 bg-white text-orange-800"
+          }`}
+          onClick={toggleHot}
+        >
+          Hot buyers
         </button>
       </div>
 
       <div
-        className={`space-y-3 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg backdrop-blur ${showFilters ? "block" : "hidden md:block"}`}
+        className={`space-y-3 rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur ${
+          filters.hot ? "border-orange-300 ring-1 ring-orange-200" : "border-white/60"
+        } ${showFilters ? "block" : "hidden md:block"}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <span className="text-sm font-semibold text-slate-900">Filters</span>
           <button
             type="button"
             className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={clearParams}
+            onClick={handleResetFilters}
           >
             Reset all filters
           </button>
+          <button
+            type="button"
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-lg border px-4 text-sm font-semibold shadow-sm ${
+              filters.hot
+                ? "border-orange-400 bg-orange-100 text-orange-900"
+                : "border-orange-200 bg-white text-orange-800 hover:bg-orange-50"
+            }`}
+            onClick={toggleHot}
+          >
+            Hot buyers
+          </button>
         </div>
+        {filters.hot ? (
+          <p className="text-xs text-orange-800">
+            Buyers in FB Lead or Intake with no update in 3+ days — contact them regularly.
+          </p>
+        ) : null}
         <div className="grid gap-2 md:grid-cols-5">
           <input
             placeholder="Search name, phone, email, address, location…"
             className="rounded border border-slate-300 px-3 py-2 text-sm"
-            value={filters.search}
-            onChange={(event) => patchParams({ search: event.target.value })}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
           />
           <select
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
-            value={filters.type}
+            className="rounded border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+            value={filters.hot ? "" : filters.type}
+            disabled={filters.hot}
             onChange={(event) => patchParams({ type: event.target.value })}
           >
             {types.map((item) => (
@@ -167,8 +224,9 @@ export default function ClientsPage() {
             ))}
           </select>
           <select
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
-            value={filters.status}
+            className="rounded border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+            value={filters.hot ? "" : filters.status}
+            disabled={filters.hot}
             onChange={(event) => patchParams({ status: event.target.value })}
           >
             {statuses.map((item) => (
@@ -346,10 +404,18 @@ export default function ClientsPage() {
                   </tr>
                 ) : null}
                 {clients.map((client) => (
-                  <tr key={client._id} className="border-t border-slate-200">
+                  <tr
+                    key={client._id}
+                    className={`border-t border-slate-200 ${isHotClient(client) ? "bg-orange-50/60" : ""}`}
+                  >
                     <td className="px-4 py-3 font-medium text-slate-900">
                       <span className="inline-flex items-center gap-2">
                         {client.name}
+                        {isHotClient(client) ? (
+                          <span className="rounded-full bg-orange-200 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-900">
+                            Hot
+                          </span>
+                        ) : null}
                         {client.remarks ? (
                           <span
                             className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700"
@@ -373,7 +439,17 @@ export default function ClientsPage() {
                     </td>
                     <td className="px-4 py-3">{client.assignedAgent?.name || "-"}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        {isHotClient(client) ? (
+                          <a
+                            href={`https://wa.me/${String(client.contactNo).replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-11 items-center rounded-lg border border-green-200 bg-green-50 px-3 text-sm font-medium text-green-800"
+                          >
+                            WhatsApp
+                          </a>
+                        ) : null}
                         <button type="button" className="min-h-11 text-blue-600" onClick={() => navigate(`/clients/${client._id}`)}>
                           View
                         </button>
@@ -401,9 +477,21 @@ export default function ClientsPage() {
               <div className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow">No clients found. Try updating your filters.</div>
             ) : null}
             {clients.map((client) => (
-              <article key={client._id} className="rounded-2xl border border-white/60 bg-white/95 p-4 shadow-lg">
+              <article
+                key={client._id}
+                className={`rounded-2xl border bg-white/95 p-4 shadow-lg ${
+                  isHotClient(client) ? "border-orange-300 bg-orange-50/50" : "border-white/60"
+                }`}
+              >
                 <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-slate-900">{client.name}</h3>
+                  <h3 className="font-semibold text-slate-900">
+                    {client.name}
+                    {isHotClient(client) ? (
+                      <span className="ml-2 rounded-full bg-orange-200 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-900">
+                        Hot · {daysSinceUpdate(client)}d
+                      </span>
+                    ) : null}
+                  </h3>
                   <span className={`rounded-full px-2 py-1 text-xs ${statusColors[client.status] || "bg-slate-100 text-slate-700"}`}>
                     {client.status}
                   </span>
@@ -422,7 +510,17 @@ export default function ClientsPage() {
                     Internal note: {String(client.remarks).slice(0, 60)}
                   </p>
                 ) : null}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {isHotClient(client) ? (
+                    <a
+                      href={`https://wa.me/${String(client.contactNo).replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-11 items-center rounded border border-green-200 bg-green-50 px-3 text-sm font-medium text-green-800"
+                    >
+                      WhatsApp
+                    </a>
+                  ) : null}
                   <button type="button" className="min-h-11 rounded border border-blue-200 px-3 text-sm text-blue-700" onClick={() => navigate(`/clients/${client._id}`)}>
                     View
                   </button>

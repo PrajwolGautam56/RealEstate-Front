@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
+import { isHotClient } from "../utils/clientHelpers";
 import Spinner from "../components/Spinner";
-
-const followUpStatuses = ["FB Lead", "Intake"];
 
 export default function DashboardPage() {
   const [clients, setClients] = useState([]);
@@ -57,15 +57,7 @@ export default function DashboardPage() {
     [properties]
   );
 
-  const followUps = useMemo(() => {
-    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    return clients.filter((client) => {
-      const isFollowUpStatus = followUpStatuses.includes(client.status);
-      const stale = now - new Date(client.updatedAt).getTime() > threeDaysMs;
-      return isFollowUpStatus && stale;
-    });
-  }, [clients]);
+  const followUps = useMemo(() => clients.filter((client) => isHotClient(client)), [clients]);
 
   if (loading) return <Spinner label="Loading dashboard..." />;
 
@@ -112,7 +104,15 @@ export default function DashboardPage() {
       </div>
 
       <section className="rounded-2xl border border-amber-300/70 bg-linear-to-r from-amber-50 to-orange-50 p-5 shadow-lg">
-        <h2 className="mb-3 text-lg font-semibold text-amber-800">Follow-up reminders</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-amber-800">Hot buyers — follow up</h2>
+          <Link
+            to="/clients?hot=1"
+            className="inline-flex min-h-11 items-center rounded-lg border border-amber-400 bg-white px-4 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-50"
+          >
+            View all hot buyers
+          </Link>
+        </div>
         {!followUps.length ? (
           <p className="text-sm text-amber-700">No pending reminders.</p>
         ) : (

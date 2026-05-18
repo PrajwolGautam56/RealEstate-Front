@@ -26,6 +26,9 @@ export default function PropertiesPage() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchDraft, setSearchDraft] = useState(() => searchParams.get("search") || "");
+
+  const filterKey = searchParams.toString();
 
   const filters = useMemo(
     () => ({
@@ -44,6 +47,18 @@ export default function PropertiesPage() {
     }),
     [searchParams]
   );
+
+  useEffect(() => {
+    setSearchDraft(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const current = searchParams.get("search") || "";
+      if (searchDraft !== current) patchParams({ search: searchDraft });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchDraft, searchParams, patchParams]);
 
   const locationMode = filters.ll === "v" ? "vdc" : "municipality";
 
@@ -76,7 +91,12 @@ export default function PropertiesPage() {
     const { data } = await api.get("/properties", { params });
     setProperties(data);
     setLoading(false);
-  }, [searchParams]);
+  }, [filterKey, searchParams]);
+
+  const handleResetFilters = () => {
+    setSearchDraft("");
+    clearParams();
+  };
 
   useEffect(() => {
     fetchAgents();
@@ -126,7 +146,7 @@ export default function PropertiesPage() {
         <button
           type="button"
           className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800"
-          onClick={clearParams}
+          onClick={handleResetFilters}
         >
           Reset all
         </button>
@@ -138,7 +158,7 @@ export default function PropertiesPage() {
           <button
             type="button"
             className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={clearParams}
+            onClick={handleResetFilters}
           >
             Reset all filters
           </button>
@@ -147,8 +167,8 @@ export default function PropertiesPage() {
           <input
             className="md:col-span-2 rounded border border-slate-300 px-3 py-2 text-sm"
             placeholder="Search ID, name, address, location, details…"
-            value={filters.search}
-            onChange={(event) => patchParams({ search: event.target.value })}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
           />
           <input
             className="rounded border border-slate-300 px-3 py-2 text-sm"
